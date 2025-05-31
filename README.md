@@ -1,11 +1,17 @@
-repo/
+./
 │
 ├── app/
-│   ├── main.py
-│   └── requirements.txt
+│   ├── __init__.py
+│   └── routes.py
 │
-├── redis_data/           
-│
+├── run.py
+├── .env
+├── requirements.txt
 ├── Dockerfile
-├── docker-compose.yml
-└── .env
+└── docker-compose.yml
+
+
+ENV
+
+SECRET_TOKEN=
+REDIS_HOST=redis

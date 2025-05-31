@@ -5,7 +5,14 @@ import os
 
 app = Flask(__name__)
 
-redis_client = redis.Redis(host=os.getenv("REDIS_HOST", "redis"), port=6001, decode_responses=True)
+redis_client = redis.Redis(host=os.getenv("REDIS_HOST", "redis"), port=6379, decode_responses=True)
+try:
+    redis_client.ping()
+    print("Connected to Redis!")
+except redis.exceptions.ConnectionError as e:
+    print("Redis connection failed:", e)
+    exit(1)
+
 
 @app.route('/get_data', methods=['POST'])
 def get_data():
@@ -45,4 +52,4 @@ def up_data():
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=6000)
+    app.run(host='0.0.0.0', port=8080)

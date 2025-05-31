@@ -1,0 +1,45 @@
+*2
+$6
+SELECT
+$1
+0
+*3
+$3
+SET
+$10
+user:23748
+$28
+{"level": 3, "progress": 80}
+*3
+$3
+SET
+$10
+user:23748
+$29
+{"level": 10, "progress": 50}
+*3
+$3
+SET
+$10
+user:23748
+$28
+{"level": 3, "progress": 80}
+*3
+$3
+SET
+$10
+user:23748
+$28
+{"level": 3, "progress": 80}
+*2
+$6
+SELECT
+$1
+0
+*3
+$3
+SET
+$8
+user:123
+$27
+{"level": 1, "progress": 0}

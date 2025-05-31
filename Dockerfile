@@ -1,10 +1,14 @@
 FROM python:3.10-slim
 
+# Set workdir inside the container
 WORKDIR /app
 
-COPY app/requirements.txt .
-RUN pip install -r requirements.txt
+# Install dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-COPY app/ .
+# Copy app files
+COPY . .
 
-CMD ["python", "main.py"]
+# Run the app
+CMD ["python", "run.py"]
