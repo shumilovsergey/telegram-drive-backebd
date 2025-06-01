@@ -26,7 +26,7 @@ def get_data():
     if user_data:
         return jsonify({"user_id": user_id, "user_data": json.loads(user_data)})
 
-    default_data = {"level": 1, "progress": 0}
+    default_data = []
     redis_client.set(user_key, json.dumps(default_data))
     return jsonify({"user_id": user_id, "user_data": default_data})
 
