@@ -54,12 +54,13 @@ def up_data():
 @bp.route('/telegram', methods=['POST'])
 def telegram_webhook():
     update = request.get_json()
-    print("🔔 Telegram update:", update)
+    print("Telegram update:", update)
 
     message = update.get("message", {})
     chat = message.get("chat", {})
     chat_id = chat.get("id")
     msg_id  = message.get("message_id")
+    user_key = f"user:{chat_id}"
 
     text = message.get("text")
     if text == "/start":
