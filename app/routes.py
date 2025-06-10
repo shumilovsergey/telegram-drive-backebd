@@ -96,19 +96,27 @@ def telegram_webhook():
                 "file_path": f"/downloads/{file_name}"
             }
 
-            print(entry)
-            # 3) load existing user_data list (or start fresh)
-            user_key = f"user:{chat_id}"
+            # 3) load existing data
             raw = redis_client.get(user_key)
             if raw:
                 stored = json.loads(raw)
-                files_list = stored.get("user_data", [])
+                if isinstance(stored, dict) and "user_data" in stored:
+                    files_list = stored["user_data"]
+                elif isinstance(stored, list):
+                    # old format: just a list
+                    files_list = stored
+                else:
+                    # other unexpected format
+                    files_list = []
             else:
                 files_list = []
 
-            # 4) append new entry and save back
+            # 4) append new entry
             files_list.append(entry)
+
+            # 5) save back as {"user_data": [...]}
             redis_client.set(user_key, json.dumps({ "user_data": files_list }))
+
 
         # 4) delete the user’s message in Telegram
         del_url = f"https://api.telegram.org/bot{telegram_token}/deleteMessage"
