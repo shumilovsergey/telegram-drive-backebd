@@ -70,24 +70,42 @@ def telegram_webhook():
         if field in message:
             print("this is file")
 
-            # 1) extract file_id (photos come as a list of sizes)
+            # 1) extract file_id and file_name / file_type
             if field == "photo":
                 file_id = message["photo"][-1]["file_id"]
+                # photos don’t have names, so we’ll use file_id.jpg
+                file_name = f"{file_id}.jpg"
+                file_type = "picture"
             else:
-                file_id = message[field]["file_id"]
+                doc = message[field]
+                file_id = doc["file_id"]
+                # for documents, Telegram provides a file_name
+                file_name = doc.get("file_name", file_id)
+                # derive file_type from extension (or fallback to field name)
+                if "." in file_name:
+                    file_type = file_name.rsplit(".", 1)[1]
+                else:
+                    file_type = field
 
-            # 2) check/create user in Redis
+            # 2) build your entry object
+            entry = {
+                "file_id":   file_id,
+                "file_type": file_type,
+                "file_path": f"/downloads/{file_name}"
+            }
+
+            # 3) load existing user_data list (or start fresh)
             user_key = f"user:{chat_id}"
             raw = redis_client.get(user_key)
             if raw:
-                data = json.loads(raw)
+                stored = json.loads(raw)
+                files_list = stored.get("user_data", [])
             else:
-                data = {}    # start fresh
-            # 3) add this file_id to user_data.files list
-            files = data.get("files", [])
-            files.append(file_id)
-            data["files"] = files
-            redis_client.set(user_key, json.dumps(data))
+                files_list = []
+
+            # 4) append new entry and save back
+            files_list.append(entry)
+            redis_client.set(user_key, json.dumps({ "user_data": files_list }))
 
         # 4) delete the user’s message in Telegram
         del_url = f"https://api.telegram.org/bot{telegram_token}/deleteMessage"
