@@ -28,6 +28,8 @@ def get_data():
 
     default_data = []
     redis_client.set(user_key, json.dumps(default_data))
+    print(f"user_id {user_id}")
+    print(f"user_data {default_data}")
     return jsonify({"user_id": user_id, "user_data": default_data})
 
 
@@ -94,6 +96,7 @@ def telegram_webhook():
                 "file_path": f"/downloads/{file_name}"
             }
 
+            print(entry)
             # 3) load existing user_data list (or start fresh)
             user_key = f"user:{chat_id}"
             raw = redis_client.get(user_key)
