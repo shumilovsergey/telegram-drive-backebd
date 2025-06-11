@@ -4,6 +4,7 @@ services:
     ports:
       - "9000:8080"
     environment:
+      - ENV PYTHONUNBUFFERED=1
       - REDIS_HOST=redis
     volumes:
       - .:/app

@@ -1,6 +1,9 @@
 import json, requests
 from flask import Blueprint, request, jsonify
 from app import redis_client, valid_token, telegram_token
+from datetime import datetime
+
+API_URL = "http://localhost:8080"
 
 bp = Blueprint('routes', __name__)
 
@@ -54,15 +57,13 @@ def up_data():
 @bp.route('/telegram', methods=['POST'])
 def telegram_webhook():
     update = request.get_json()
-    print("Telegram update:", update)
 
     message = update.get("message", {})
     chat = message.get("chat", {})
     chat_id = chat.get("id")
     msg_id  = message.get("message_id")
-    user_key = f"user:{chat_id}"
-
     text = message.get("text")
+
     if text == "/start":
         # … existing /start logic …
         return jsonify({"status": "ok"}), 200
@@ -71,53 +72,40 @@ def telegram_webhook():
     file_fields = ["photo", "document", "audio", "video", "voice"]
     for field in file_fields:
         if field in message:
-            print("this is file")
-
-            # 1) extract file_id and file_name / file_type
             if field == "photo":
                 file_id = message["photo"][-1]["file_id"]
                 # photos don’t have names, so we’ll use file_id.jpg
-                file_name = f"{file_id}.jpg"
-                file_type = "picture"
+                now = datetime.now()
+                time_stemp = now.strftime("%H:%M-%d.%m.%y")
+                file_name = f"{time_stemp}.jpg"
+
             else:
                 doc = message[field]
                 file_id = doc["file_id"]
                 # for documents, Telegram provides a file_name
                 file_name = doc.get("file_name", file_id)
-                # derive file_type from extension (or fallback to field name)
-                if "." in file_name:
-                    file_type = file_name.rsplit(".", 1)[1]
-                else:
-                    file_type = field
+                
+            resp = requests.post(f"{API_URL}/get_data", json={
+                "user_id": chat_id,
+                "token": valid_token
+            })
 
-            # 2) build your entry object
-            entry = {
-                "file_id":   file_id,
-                "file_type": file_type,
-                "file_path": f"/downloads/{file_name}"
+            data = resp.json()
+            user_data = data.get("user_data", [])
+
+            new_file = {
+                "file_id": file_id,
+                "file_type": "",
+                "file_path": f"/tgDrive/{file_name}"
             }
 
-            # 3) load existing data
-            raw = redis_client.get(user_key)
-            if raw:
-                stored = json.loads(raw)
-                if isinstance(stored, dict) and "user_data" in stored:
-                    files_list = stored["user_data"]
-                elif isinstance(stored, list):
-                    # old format: just a list
-                    files_list = stored
-                else:
-                    # other unexpected format
-                    files_list = []
-            else:
-                files_list = []
+            user_data.append(new_file)
 
-            # 4) append new entry
-            files_list.append(entry)
-
-            # 5) save back as {"user_data": [...]}
-            redis_client.set(user_key, json.dumps({ "user_data": files_list }))
-
+            response = requests.post(f"{API_URL}/up_data", json={
+                "user_id": chat_id,
+                "token": valid_token,
+                "user_data": user_data
+            })
 
         # 4) delete the user’s message in Telegram
         del_url = f"https://api.telegram.org/bot{telegram_token}/deleteMessage"
@@ -126,5 +114,27 @@ def telegram_webhook():
             "message_id": msg_id
         })
         break
+
+    return jsonify({"status": "ok"}), 200
+
+
+@bp.route('/download', methods=['POST'])
+def download():
+    req = request.get_json()
+
+    if not check_token(req):
+        return jsonify({"error": "Invalid or missing token"}), 403
+
+    user_id = req.get("user_id")
+    file_id = req.get("file_id")
+    if not user_id or not file_id:
+        return jsonify({"error": "Missing user_id or file_id"}), 400
+    
+    send_url = f"https://api.telegram.org/bot{telegram_token}/sendDocument"
+    payload = {
+        "chat_id": user_id,
+        "document": file_id
+    }
+    tg_response = requests.post(send_url, json=payload)
 
     return jsonify({"status": "ok"}), 200
